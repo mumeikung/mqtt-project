@@ -1,0 +1,10 @@
+{
+  "name": "mqtt-broker",
+  "version": "1.0.0",
+  "main": "broker.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "net": "^1.0.2"
+  }
+}
