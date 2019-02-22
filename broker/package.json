@@ -5,6 +5,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "net": "^1.0.2"
+    "net": "^1.0.2",
+    "uuidv4": "^3.0.1"
   }
 }
