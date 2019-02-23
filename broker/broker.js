@@ -92,6 +92,7 @@ class JNCF {
       }
       console.log('Payload:', payload)
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
+      console.log(`=====>> TOPIC: "${topic}", MESSAGE: "${payload}" <<=====`)
       this.PUBACK(messageId)
       return pubToSub(topic, payload)
     } else if (type === 4) { // PUBACK
