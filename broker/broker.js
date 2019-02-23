@@ -23,15 +23,19 @@ const server = net.createServer((socket) => {
   })
   socket.on('end', () => {
     console.log('end')
+    myJNCF.END()
   })
   socket.on('close', (error) => {
     console.log('close isError:', error)
+    myJNCF.END()
   })
   socket.on('timeout', () => {
     console.log('timeout')
+    myJNCF.END()
   })
   socket.on('error', (error) => {
     console.error('error', error.name, error.message)
+    myJNCF.END()
   })
 })
 
@@ -54,7 +58,7 @@ class JNCF {
     const RemainingLength = parseInt(to8bit(buffer[1]) + to8bit(buffer[2]), 2)
     console.log('Remaining Length:', RemainingLength)
     let nextBit = 3
-    if (type === 1) {
+    if (type === 1) { // CONN Type
       console.log('Type: CONN')
       const protocolNameLength = buffer[nextBit++]
       console.log('Protocol Name Length:', protocolNameLength)
@@ -69,6 +73,8 @@ class JNCF {
       if (protocolVersion !== 1) throw new Error('Protocol Level not correct')
       if (nextBit-3 === RemainingLength) console.log('Remaining Length correct')
       return this.CONNACK()
+    } else if (type === 3) { // CONNACK Type
+      console.log('Type: CONNACK')
     }
     throw new Error ('Type not correct')
   }
@@ -76,16 +82,28 @@ class JNCF {
   CONNACK () {
     console.log('CONNACK')
     const ackHeader = [32, 0, 1, 0]
-    this.socket.write(new Buffer(ackHeader))
+    return this.socket.write(new Buffer(ackHeader))
   }
 
-  PUB () {}
+  PUB () {
+    console.log('PUB')
+  }
 
   PUBACK () {}
 
   SUBACK () {}
 
   PINGACK () {}
+
+  END () {
+    if (this.isEnd) return null
+    this.socket.end()
+    delete(socketList[this.socketId])
+    if (this.topic) {
+      // unset me in topic
+    }
+    this.isEnd = true
+  }
 }
 
 const to8bit = (number) => {
@@ -100,7 +118,7 @@ const debugBuffer = (buffer) => {
     const bin = to8bit(number)
     const left = parseInt(bin.substr(0, 4), 2)
     const right = parseInt(bin.substr(4, 4), 2)
-    let data = 'byte ' + ('00' + (i-1)).substr(-2)
+    let data = 'byte ' + ('00' + (i-2)).substr(-2)
     data += ' => ' + hex + ' ' + dec + ' ' + bin.substr(0, 4) + ' ' + bin.substr(4, 4)
     data += ' => ' + left + ' ' + right
     data += ' => 0x' + left.toString(16) + ' 0x' + right.toString(16)
