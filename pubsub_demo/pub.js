@@ -31,7 +31,7 @@ const socket = new PromiseSocket(newSoc)
 
 const runn = async () => {
   try {
-    await socket.connect(1883, 'localhost')
+    await socket.connect(1883, 'app.mumeino.com')
     await socket.write(new Buffer([16, 0, 6, 4, 74, 78, 67, 70, 1]))
     const conn = await socket.read()
     console.log('conn', conn)

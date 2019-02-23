@@ -24,12 +24,12 @@ const socket = new PromiseSocket(newSoc)
 
 const runn = async () => {
   try {
-    await socket.connect(1883, 'localhost')
+    await socket.connect(1883, 'app.mumeino.com')
     await socket.write(new Buffer([16, 0, 6, 4, 74, 78, 67, 70, 1]))
     const conn = await socket.read()
     console.log('conn', conn)
     if (conn[0] !== 32 && conn[0] !== 0 && conn[0] !== 1 && conn[0] !== 0) throw new Error('CONNACK not correct')
-    const topic = '/test/kiki/1'
+    const topic = '/test/kiki'
     let subData = [80, 0, 0]
     subData.push(topic.length)
     for (let i = 0; i < topic.length; i++) {
