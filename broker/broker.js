@@ -102,8 +102,8 @@ class JNCF {
       if (this.messageId) {
         if (this.messageId === messageId) {
           clearInterval(this.loopPUB)
-          delete(this.loopPUB)
-          delete(this.messageId)
+          delete this.loopPUB
+          delete this.messageId
           console.log('PUBACK Complete')
           return null
         } else throw new Error('Message ID not match')
@@ -121,6 +121,7 @@ class JNCF {
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
       if (!topicList[topic]) topicList[topic] = {}
       topicList[topic][socketId] = true
+      this.topic = topic
       return this.SUBACK()
     } else if (type === 7) { // PING
       console.log('Type: PING')
@@ -170,10 +171,11 @@ class JNCF {
   END () {
     if (this.isEnd) return null
     this.socket.end()
-    delete(JNCFList[this.socketId])
     if (this.topic) {
       // unset me in topic
+      delete topicList[this.topic][this.socketId]
     }
+    delete JNCFList[this.socketId]
     this.isEnd = true
   }
 }
