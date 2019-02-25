@@ -16,7 +16,7 @@ const topicFormat = (topic = '') => {
       }
     }
   }
-  return (newTopic === '' ? 'null' : newTopic)
+  return (newTopic === '' ? '/' : newTopic)
 }
 
 const newSoc = new net.Socket()

@@ -1,7 +1,7 @@
 const net = require('net')
 const UUID = require('uuidv4')
 
-const debug = true
+const debug = false
 
 let JNCFList = {}
 let topicList = {}
@@ -19,6 +19,7 @@ const server = net.createServer((socket) => {
       myJNCF.decode(buffer)
     } catch (error) {
       console.error('decode', error.message)
+      socket.destroy()
     }
   })
   socket.on('end', () => {
@@ -185,7 +186,7 @@ class JNCF {
   END () {
     if (this.isEnd) return null
     this.isConnect = false
-    this.socket.end()
+    // this.socket.end()
     if (this.topic) {
       // unset me in topic
       delete topicList[this.topic][this.socketId]
@@ -199,12 +200,21 @@ class JNCF {
 
 const pubToSub = (topic = '', payload = '') => {
   const myTopic = topicFormat(topic)
-  const list = topicList[myTopic]
+  // const list = topicList[myTopic]
+  let list = {}
+  for (const key in topicList) {
+    if (topicList.hasOwnProperty(key)) {
+      if (key.startsWith(myTopic, 0)) {
+        const element = topicList[key]
+        for (const sid in element) list[sid] = true
+      }
+    }
+  }
   if (list) {
     const pubData = pubBuffer(topic, payload)
     for (const key in list) {
       const thisJNCF = JNCFList[key]
-      if (thisJNCF) thisJNCF.PUB(pubData)   
+      if (thisJNCF) thisJNCF.PUB(pubData)
     }
   }
 }
@@ -241,7 +251,7 @@ const topicFormat = (topic = '') => {
       }
     }
   }
-  return (newTopic === '' ? 'null' : newTopic)
+  return (newTopic === '' ? '/' : newTopic)
 }
 
 const pubBuffer = (topic = '', payload = '') => {
