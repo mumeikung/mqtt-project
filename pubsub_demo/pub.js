@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+'use strict'
+
 const net = require('net')
 const PromiseSocket = require('promise-socket')
 
@@ -26,17 +29,21 @@ const to8bit = (number) => {
   return ('00000000' + number.toString(2)).substr(-8)
 }
 
+const ADDR = process.argv[2] || 'localhost'
+const TOPIC = process.argv[3] || '/'
+const MSG = process.argv[4] || ''
+
 const newSoc = new net.Socket()
 const socket = new PromiseSocket(newSoc)
 
 const runn = async () => {
   try {
-    await socket.connect(1883, 'app.mumeino.com')
+    await socket.connect(1883, ADDR)
     await socket.write(new Buffer([16, 0, 6, 4, 74, 78, 67, 70, 1]))
     const conn = await socket.read()
     console.log('conn', conn)
     if (conn[0] !== 32 && conn[0] !== 0 && conn[0] !== 1 && conn[0] !== 0) throw new Error('CONNACK not correct')
-    const pubData = pubBuffer('/test/kiki', 'value=1')
+    const pubData = pubBuffer(TOPIC, MSG)
     console.log('MSG ID:', pubData.messageId)
     await socket.write(pubData.buffer)
     const ack = await socket.read()

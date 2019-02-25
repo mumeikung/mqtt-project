@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+'use strict'
+
 const net = require('net')
 const PromiseSocket = require('promise-socket')
 
@@ -19,17 +22,22 @@ const topicFormat = (topic = '') => {
   return (newTopic === '' ? '/' : newTopic)
 }
 
+// console.log(process.argv)
+
+const ADDR = process.argv[2] || 'localhost'
+const TOPIC = process.argv[3] || '/'
+
 const newSoc = new net.Socket()
 const socket = new PromiseSocket(newSoc)
 
 const runn = async () => {
   try {
-    await socket.connect(1883, 'app.mumeino.com')
+    await socket.connect(1883, ADDR)
     await socket.write(new Buffer([16, 0, 6, 4, 74, 78, 67, 70, 1]))
     const conn = await socket.read()
     console.log('conn', conn)
     if (conn[0] !== 32 && conn[0] !== 0 && conn[0] !== 1 && conn[0] !== 0) throw new Error('CONNACK not correct')
-    const topic = '/test/kiki'
+    const topic = TOPIC
     let subData = [80, 0, 0]
     subData.push(topic.length)
     for (let i = 0; i < topic.length; i++) {
@@ -41,7 +49,7 @@ const runn = async () => {
     await socket.write(new Buffer(subData))
     const subAck = await socket.read()
     if (subAck[0] !== 96 && subAck[0] !== 0 && subAck[0] !== 1 && subAck[0] !== 0) throw new Error('SUBACK not correct')
-    console.log(`Start Subscribe topic "${topic}"`)
+    console.log(`Start Subscribe Address: "${ADDR}" Topic "${topic}"`)
     while (1) {
       const buffer = await socket.read()
       const byte1 = to8bit(buffer[0])
