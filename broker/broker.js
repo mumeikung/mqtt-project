@@ -110,6 +110,7 @@ class JNCF {
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
       console.log(`PUBLISH => TOPIC: "${topic}" => MESSAGE: "${payload}"`)
       this.PUBACK(messageId)
+      this.isPub = true
       return pubToSub(topic, payload)
     } else if (type === 4) { // PUBACK
       if (debug) console.log('Type: PUBACK')
@@ -140,7 +141,8 @@ class JNCF {
       if (!topicList[topic]) topicList[topic] = {}
       topicList[topic][this.socketId] = true
       this.topic = topic
-      console.log(this.socketId, 'start subscribe...')
+      console.log(this.socketId, 'start subscribe Topic:', topic)
+      this.isSub = true
       return this.SUBACK()
     } else if (type === 7) { // PING
       if (debug) console.log('Type: PING')
@@ -206,6 +208,7 @@ class JNCF {
     }
     delete JNCFList[this.socketId]
     this.isEnd = true
+    if (this.isSub) console.log(this.socketId, 'stop subscribe Topic:', this.topic)
     if (!this.socket.destroyed) this.socket.end(Buffer.from([144, 0, 1, 0]))
     if (debug) console.log('===== END SOCKET =====')
   }
