@@ -6,5 +6,8 @@ CPE Network MQTT Project
 3. Subscriber
 
 # Demo Host
-host: app.mumeino.com
-port: 1883
+
+Host: app.mumeino.com<br/>
+Port: 1883 (MQTT)<br/><br/>
+Protocol Name: JNCF<br/>
+Protocol Version: 1
