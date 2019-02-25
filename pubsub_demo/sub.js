@@ -33,7 +33,7 @@ const socket = new PromiseSocket(newSoc)
 const runn = async () => {
   try {
     await socket.connect(1883, ADDR)
-    await socket.write(new Buffer([16, 0, 6, 4, 74, 78, 67, 70, 1]))
+    await socket.write(Buffer.from([16, 0, 6, 4, 74, 78, 67, 70, 1]))
     const conn = await socket.read()
     console.log('conn', conn)
     if (conn[0] !== 32 && conn[0] !== 0 && conn[0] !== 1 && conn[0] !== 0) throw new Error('CONNACK not correct')
@@ -46,7 +46,7 @@ const runn = async () => {
     const RemainLength = ('0000000000000000' + (subData.length - 3).toString(2)).substr(-16)
     subData[1] = parseInt(RemainLength.substr(0, 8), 2)
     subData[2] = parseInt(RemainLength.substr(8, 8), 2)
-    await socket.write(new Buffer(subData))
+    await socket.write(Buffer.from(subData))
     const subAck = await socket.read()
     if (subAck[0] !== 96 && subAck[0] !== 0 && subAck[0] !== 1 && subAck[0] !== 0) throw new Error('SUBACK not correct')
     console.log(`Start Subscribe Address: "${ADDR}" Topic "${topic}"`)
@@ -87,12 +87,15 @@ const runn = async () => {
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
       console.log(`PUBLISH => TOPIC: "${topic}" => MESSAGE: "${payload}"`)
       const ackHeader = [64, 0, 2, parseInt(messageId.substr(0, 8), 2), parseInt(messageId.substr(8, 8), 2)]
-      await socket.write(new Buffer(ackHeader))
+      await socket.write(Buffer.from(ackHeader))
     }
-    await socket.end()
+    await socket.write(Buffer.from([144, 0, 1, 0]))
+    const DISCONN = await socket.read()
+    if (DISCONN[0] === 144 && DISCONN[0] === 0 && DISCONN[0] === 1 && DISCONN[0] === 0) console.log('DISSCONN SUCCESS')
+    await socket.destroy()
   } catch (error) {
     console.error(error.message)
-    await socket.end()
+    await socket.destroy()
   }
 }
 runn()

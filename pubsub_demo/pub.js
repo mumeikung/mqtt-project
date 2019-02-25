@@ -20,12 +20,12 @@ const pubBuffer = (topic = '', payload = '') => {
   pubData[1] = parseInt(RemainLength.substr(0, 8), 2)
   pubData[2] = parseInt(RemainLength.substr(8, 8), 2)
   return {
-    buffer: new Buffer(pubData),
+    buffer: Buffer.from(pubData),
     messageId: parseInt(messageId, 2)
   }
 }
 
-const to8bit = (number) => {
+const to8bit = (number = 0) => {
   return ('00000000' + number.toString(2)).substr(-8)
 }
 
@@ -39,7 +39,7 @@ const socket = new PromiseSocket(newSoc)
 const runn = async () => {
   try {
     await socket.connect(1883, ADDR)
-    await socket.write(new Buffer([16, 0, 6, 4, 74, 78, 67, 70, 1]))
+    await socket.write(Buffer.from([16, 0, 6, 4, 74, 78, 67, 70, 1]))
     const conn = await socket.read()
     console.log('conn', conn)
     if (conn[0] !== 32 && conn[0] !== 0 && conn[0] !== 1 && conn[0] !== 0) throw new Error('CONNACK not correct')
@@ -54,10 +54,13 @@ const runn = async () => {
     console.log('GET MSG ID:', getMessageID)
     if (pubData.messageId !== getMessageID) throw new Error('Message ID not match')
     console.log('PUB SUCCESS')
-    await socket.end()
+    await socket.write(Buffer.from([144, 0, 1, 0]))
+    const DISCONN = await socket.read()
+    if (DISCONN[0] === 144 && DISCONN[0] === 0 && DISCONN[0] === 1 && DISCONN[0] === 0) console.log('DISSCONN SUCCESS')
+    await socket.destroy()
   } catch (error) {
     console.error(error.message)
-    await socket.end()
+    await socket.destroy()
   }
 }
 runn()

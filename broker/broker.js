@@ -4,7 +4,9 @@
 const net = require('net')
 const UUID = require('uuidv4')
 
-const debug = false
+const arg0 = process.argv[2] || ''
+
+const debug = (arg0 === '--debug')
 
 let JNCFList = {}
 let topicList = {}
@@ -16,7 +18,7 @@ const server = net.createServer((socket) => {
   if (debug) console.log('address:', address.address, 'port:', address.port, 'family:', address.family)
   const myJNCF = new JNCF(socket, socketId)
   JNCFList[socketId] = myJNCF
-  socket.on('data', (buffer) => {
+  socket.on('data', (buffer = Buffer.from([])) => {
     // debugBuffer(buffer)
     try {
       myJNCF.decode(buffer)
@@ -49,6 +51,7 @@ const server = net.createServer((socket) => {
 
 server.listen(1883, () => {
   console.log('port 1883 (MQTT) listening')
+  if (debug) console.log('Debug mode on')
 })
 
 class JNCF {
@@ -57,7 +60,9 @@ class JNCF {
     this.socketId = uid
   }
 
-  decode (buffer = new Buffer()) {
+  decode (buffer = Buffer.from([])) {
+    if (debug) console.log('Decoding', this.socketId)
+    if (debug) console.log(buffer)
     const byte1 = to8bit(buffer[0])
     const type = parseInt(byte1.substr(0, 4), 2)
     const flags = byte1.substr(4, 4)
@@ -117,6 +122,7 @@ class JNCF {
           delete this.loopPUB
           delete this.messageId
           if (debug) console.log('PUBACK Complete')
+          if (debug) console.log('===== PUBACK END =====')
           return null
         } else throw new Error('Message ID not match')
       } else throw new Error('Message ID not found')
@@ -134,26 +140,30 @@ class JNCF {
       if (!topicList[topic]) topicList[topic] = {}
       topicList[topic][this.socketId] = true
       this.topic = topic
+      console.log(this.socketId, 'start subscribe...')
       return this.SUBACK()
     } else if (type === 7) { // PING
       if (debug) console.log('Type: PING')
       return this.PINGACK()
+    } else if (type === 9) { // DISCONN
+      if (debug) console.log('Type: DISCONN')
+      return this.END()
     }
     throw new Error ('Type not correct')
   }
 
   CONNACK () {
-    if (debug) console.log('CONNACK')
+    if (debug) console.log('CONNACK', this.socketId)
     this.isConnect = true
     const ackHeader = [32, 0, 1, 0]
-    if (debug) console.log('===== END =====')
-    return this.socket.write(new Buffer(ackHeader))
+    if (debug) console.log('===== CONNACK END =====')
+    return this.socket.write(Buffer.from(ackHeader))
   }
 
   PUB (pubData = pubBuffer()) {
-    if (debug) console.log('PUB')
+    if (debug) console.log('PUB', this.socketId)
     this.waitPUBACK(pubData)
-    if (debug) console.log('===== END =====')
+    if (debug) console.log('===== PUB END =====')
     return this.socket.write(pubData.buffer)
   }
 
@@ -165,25 +175,25 @@ class JNCF {
   }
 
   PUBACK (messageId = '') {
-    if (debug) console.log('PUBACK')
+    if (debug) console.log('PUBACK', this.socketId)
     const msgId = ('0000000000000000' + messageId).substr(-16)
     const ackHeader = [64, 0, 2, parseInt(msgId.substr(0, 8), 2), parseInt(msgId.substr(8, 8), 2)]
-    if (debug) console.log('===== END =====')
-    return this.socket.write(new Buffer(ackHeader))
+    if (debug) console.log('===== PUBACK END =====')
+    return this.socket.write(Buffer.from(ackHeader))
   }
 
   SUBACK () {
-    if (debug) console.log('SUBACK')
+    if (debug) console.log('SUBACK', this.socketId)
     const ackHeader = [96, 0, 1, 0]
-    if (debug) console.log('===== END =====')
-    return this.socket.write(new Buffer(ackHeader))
+    if (debug) console.log('===== SUBACK END =====')
+    return this.socket.write(Buffer.from(ackHeader))
   }
 
   PINGACK () {
-    if (debug) console.log('PINGACK')
+    if (debug) console.log('PINGACK', this.socketId)
     const ackHeader = [128, 0, 0]
-    if (debug) console.log('===== END =====')
-    return this.socket.write(new Buffer(ackHeader))
+    if (debug) console.log('===== PINGACK END =====')
+    return this.socket.write(Buffer.from(ackHeader))
   }
 
   END () {
@@ -196,7 +206,7 @@ class JNCF {
     }
     delete JNCFList[this.socketId]
     this.isEnd = true
-    this.socket.destroy()
+    if (!this.socket.destroyed) this.socket.end(Buffer.from([144, 0, 1, 0]))
     if (debug) console.log('===== END SOCKET =====')
   }
 }
@@ -222,7 +232,7 @@ const pubToSub = (topic = '', payload = '') => {
   }
 }
 
-const to8bit = (number) => {
+const to8bit = (number = 0) => {
   return ('00000000' + number.toString(2)).substr(-8)
 }
 
@@ -273,7 +283,7 @@ const pubBuffer = (topic = '', payload = '') => {
   pubData[1] = parseInt(RemainLength.substr(0, 8), 2)
   pubData[2] = parseInt(RemainLength.substr(8, 8), 2)
   return {
-    buffer: new Buffer(pubData),
+    buffer: Buffer.from(pubData),
     messageId: parseInt(messageId, 2)
   }
 }
