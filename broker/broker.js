@@ -155,7 +155,7 @@ class JNCF {
   }
 
   CONNACK () {
-    this.CHECKSOCKET()
+    if (!this.CHECKSOCKET()) throw new Error('Socket Destroyed!')
     if (debug) console.log('CONNACK', this.socketId)
     this.isConnect = true
     const ackHeader = [32, 0, 1, 0]
@@ -164,7 +164,16 @@ class JNCF {
   }
 
   PUB (pubData = pubBuffer()) {
-    this.CHECKSOCKET()
+    if (!this.CHECKSOCKET()) throw new Error('Socket Destroyed!')
+    if (!this.countPUB) this.countPUB = 0
+    this.countPUB += 1
+    if (this.countPUB > 3) {
+      console.log(this.socketId, 'not response PUBACK...')
+      if (this.loopPUB) clearTimeout(this.loopPUB)
+      delete this.loopPUB
+      this.END()
+      return null
+    }
     if (debug) console.log('PUB', this.socketId)
     this.waitPUBACK(pubData)
     if (debug) console.log('===== PUB END =====')
@@ -180,7 +189,7 @@ class JNCF {
   }
 
   PUBACK (messageId = '') {
-    this.CHECKSOCKET()
+    if (!this.CHECKSOCKET()) throw new Error('Socket Destroyed!')
     if (debug) console.log('PUBACK', this.socketId)
     const msgId = ('0000000000000000' + messageId).substr(-16)
     const ackHeader = [64, 0, 2, parseInt(msgId.substr(0, 8), 2), parseInt(msgId.substr(8, 8), 2)]
@@ -189,7 +198,7 @@ class JNCF {
   }
 
   SUBACK () {
-    this.CHECKSOCKET()
+    if (!this.CHECKSOCKET()) throw new Error('Socket Destroyed!')
     if (debug) console.log('SUBACK', this.socketId)
     const ackHeader = [96, 0, 1, 0]
     if (debug) console.log('===== SUBACK END =====')
@@ -197,7 +206,7 @@ class JNCF {
   }
 
   PINGACK () {
-    this.CHECKSOCKET()
+    if (!this.CHECKSOCKET()) throw new Error('Socket Destroyed!')
     if (debug) console.log('PINGACK', this.socketId)
     const ackHeader = [128, 0, 0]
     if (debug) console.log('===== PINGACK END =====')
@@ -222,8 +231,9 @@ class JNCF {
   CHECKSOCKET () {
     if (this.socket.destroyed || this.isEnd) {
       if (this.loopPUB) clearTimeout(this.loopPUB)
-      throw new Error('Socket Destroyed!')
+      return false
     }
+    return true
   }
 }
 
