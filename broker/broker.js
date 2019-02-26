@@ -119,7 +119,7 @@ class JNCF {
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
       if (this.messageId) {
         if (this.messageId === messageId) {
-          clearInterval(this.loopPUB)
+          clearTimeout(this.loopPUB)
           delete this.loopPUB
           delete this.messageId
           if (debug) console.log('PUBACK Complete')
@@ -155,6 +155,7 @@ class JNCF {
   }
 
   CONNACK () {
+    this.CHECKSOCKET()
     if (debug) console.log('CONNACK', this.socketId)
     this.isConnect = true
     const ackHeader = [32, 0, 1, 0]
@@ -163,6 +164,7 @@ class JNCF {
   }
 
   PUB (pubData = pubBuffer()) {
+    this.CHECKSOCKET()
     if (debug) console.log('PUB', this.socketId)
     this.waitPUBACK(pubData)
     if (debug) console.log('===== PUB END =====')
@@ -170,13 +172,15 @@ class JNCF {
   }
 
   waitPUBACK (pubData = pubBuffer()) {
+    if (this.loopPUB) clearTimeout(this.loopPUB)
     this.messageId = pubData.messageId
-    this.loopPUB = setInterval(() => {
+    this.loopPUB = setTimeout(() => {
       this.PUB(pubData)
     }, 10000)
   }
 
   PUBACK (messageId = '') {
+    this.CHECKSOCKET()
     if (debug) console.log('PUBACK', this.socketId)
     const msgId = ('0000000000000000' + messageId).substr(-16)
     const ackHeader = [64, 0, 2, parseInt(msgId.substr(0, 8), 2), parseInt(msgId.substr(8, 8), 2)]
@@ -185,6 +189,7 @@ class JNCF {
   }
 
   SUBACK () {
+    this.CHECKSOCKET()
     if (debug) console.log('SUBACK', this.socketId)
     const ackHeader = [96, 0, 1, 0]
     if (debug) console.log('===== SUBACK END =====')
@@ -192,6 +197,7 @@ class JNCF {
   }
 
   PINGACK () {
+    this.CHECKSOCKET()
     if (debug) console.log('PINGACK', this.socketId)
     const ackHeader = [128, 0, 0]
     if (debug) console.log('===== PINGACK END =====')
@@ -211,6 +217,13 @@ class JNCF {
     if (this.isSub) console.log(this.socketId, 'stop subscribe Topic:', this.topic)
     if (!this.socket.destroyed) this.socket.end(Buffer.from([144, 0, 1, 0]))
     if (debug) console.log('===== END SOCKET =====')
+  }
+
+  CHECKSOCKET () {
+    if (this.socket.destroyed || this.isEnd) {
+      if (this.loopPUB) clearTimeout(this.loopPUB)
+      throw new Error('Socket Destroyed!')
+    }
   }
 }
 
