@@ -1,26 +1,14 @@
 #!/usr/bin/env node
 'use strict'
- for (let j = 0; j < process.argv.length; j++) 
- {  
-    
- }
 const net = require('net');
 const con = new net.Socket();
-let topic = process.argv[3] || '/'
-let arrayTopic = new Array()
-let buff = []
-let data = process.argv[4]  || ''
-let arrayData = new Array()
-let i = 0
-let j = 0
-let round = 0
-let mID = 0
-let dec = ''
-let mIdToBuff = ''
-function getRandomInt(max) {
+const topic = process.argv[3] || '/'
+const ip = process.argv[2] || 'localhost'
+function getRandomInt(max) 
+{
     const val = Math.floor(Math.random() * Math.floor(max))
     return val
-  }
+}
 function addInfoToBuffer(value = [], r = 0)
 {
     let check = r
@@ -55,7 +43,15 @@ function addInfoToBuffer(value = [], r = 0)
         dec2: dec2
     }
 }
-con.connect(1883,process.argv[2], function() {
+con.connect(1883,ip, function() {
+    let arrayTopic = new Array()
+    let buff = []
+    let data = process.argv[4]  || ''
+    let arrayData = new Array()
+    let round = 0
+    let mID = 0
+    let dec = ''
+    let mIdToBuff = ''
         con.write(Buffer.from( [ 16,0,6,4,74,78,67,70,1 ] ))
         con.on('data' , (buffer) => {    
         if(buffer[0] == 64)
@@ -67,7 +63,7 @@ con.connect(1883,process.argv[2], function() {
         else if(buffer[0] == 32)
         {
             buff.push(topic.length)
-            for(i=0;i<topic.length;i++)
+            for(let i=0;i<topic.length;i++)
             {
                 arrayTopic[i] = topic.charCodeAt(i)
                 buff.push(arrayTopic[i])
@@ -76,7 +72,7 @@ con.connect(1883,process.argv[2], function() {
             mIdToBuff = addInfoToBuffer(mID,1)
             buff.push(mIdToBuff.dec1)
             buff.push(mIdToBuff.dec2)
-            for(j=0;j<data.length;j++)
+            for(let j=0;j<data.length;j++)
             {
                 arrayData[j] = data.charCodeAt(j)
                 buff.push(arrayData[j])
