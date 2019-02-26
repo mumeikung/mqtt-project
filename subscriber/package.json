@@ -1,0 +1,14 @@
+{
+  "name": "subscribe-jncf",
+  "version": "1.0.0",
+  "main": "newSub.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "net": "^1.0.2",
+    "promise-socket": "^3.1.1"
+  },
+  "bin": {
+    "subscribe": "./newSub.js"
+  }
+}
