@@ -1,0 +1,13 @@
+{
+  "name": "publish",
+  "version": "1.0.0",
+  "main": "pub.js",
+  "dependencies": {
+    "net": "^1.0.2"
+  },
+  "author": "",
+  "license": "MIT",
+  "bin": {
+    "publish": "./pub.js"
+  }
+}
