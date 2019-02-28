@@ -175,6 +175,7 @@ class JNCF {
       return null
     }
     if (debug) console.log('PUB', this.socketId)
+    if (debug) console.log('Message ID:', pubData.messageId)
     this.waitPUBACK(pubData)
     if (debug) console.log('===== PUB END =====')
     return this.socket.write(pubData.buffer)
