@@ -41,8 +41,17 @@ const runn = async() => {
         console.log(pub)
         if (pub[0] !== 48) throw new Error('PUB false')
         const pubLength = parseInt(conv8bit(pub[1]) + conv8bit(pub[2]), 2)
-        // console.log(pubName)
-        const pubHeadLength = pubLength - pub[3] - pub.sub
+        console.log('RML Math:', ((pub[1] << 8) + pub[2]))
+        console.log('RML CONV:', pubLength)
+        let topicName = []
+        for (let i = 4, j = 0 ; i < (pub[3] + 4); i++) topicName[j++] = String.fromCharCode(pub[i])
+        topicName = topicName.join('')
+        const mesID = parseInt(conv8bit(pub[pub[3]+4]) + conv8bit(pub[pub[3]+5]), 2)
+        console.log('topic name:', topicName)
+        console.log('MSG ID Math:', ((pub[pub[3]+4] << 8) + pub[pub[3]+5]))
+        console.log('message id:', mesID)
+        // console.log(pub[3])
+        // const pubAck = pub[pubLength]
     }
 }
 runn()
