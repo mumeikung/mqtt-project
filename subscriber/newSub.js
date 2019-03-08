@@ -41,15 +41,23 @@ const runn = async() => {
         console.log(pub)
         if (pub[0] !== 48) throw new Error('PUB false')
         const pubLength = parseInt(conv8bit(pub[1]) + conv8bit(pub[2]), 2)
-        console.log('RML Math:', ((pub[1] << 8) + pub[2]))
-        console.log('RML CONV:', pubLength)
+        // console.log('RML Math:', ((pub[1] << 8) + pub[2]))
+        // console.log('RML CONV:', pubLength)
         let topicName = []
         for (let i = 4, j = 0 ; i < (pub[3] + 4); i++) topicName[j++] = String.fromCharCode(pub[i])
         topicName = topicName.join('')
         const mesID = parseInt(conv8bit(pub[pub[3]+4]) + conv8bit(pub[pub[3]+5]), 2)
-        console.log('topic name:', topicName)
-        console.log('MSG ID Math:', ((pub[pub[3]+4] << 8) + pub[pub[3]+5]))
-        console.log('message id:', mesID)
+        // console.log('topic name:', topicName)
+        // console.log('MSG ID Math:', ((pub[pub[3]+4] << 8) + pub[pub[3]+5]))
+        // console.log('message id:', mesID)    
+        // const payLoadSt = parseInt(pub[3], 16) + 6
+        let payLoadMess = []
+        for (let i = parseInt(pub[3], 16) + 6, j = 0 ; i < pubLength+3 ; i++) payLoadMess[j++] = String.fromCharCode(pub[i])
+        console.log(payLoadMess.join(''))
+        const ping = [70,0,0]
+        socket.write(Buffer.from(ping))
+        const pingAck = await socket.read()
+        if (pingAck[0] !== 128 && pingAck[1] !== 0 && pingAck[2] !== 0) throw new Error('PINGACK false')
         // console.log(pub[3])
         // const pubAck = pub[pubLength]
     }
