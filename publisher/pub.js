@@ -78,7 +78,7 @@ con.connect(1883, ip, () => {
                     return 0
                 }
                 clearTimeout(timeout)
-                timeout = setTimeout(waitPub,1000,buff);
+                timeout = setTimeout(waitPub,10000,buff);
             }
             if(buffer[0] != 64)
             {
