@@ -10,6 +10,7 @@ const debug = (arg0 === '--debug')
 
 let JNCFList = {}
 let topicList = {}
+let PUBACKcount = {}
 
 const server = net.createServer((socket) => {
   const socketId = UUID()
@@ -19,7 +20,6 @@ const server = net.createServer((socket) => {
   const myJNCF = new JNCF(socket, socketId)
   JNCFList[socketId] = myJNCF
   socket.on('data', (buffer = Buffer.from([])) => {
-    // debugBuffer(buffer)
     try {
       myJNCF.decode(buffer)
     } catch (error) {
@@ -58,6 +58,7 @@ class JNCF {
   constructor (socket = new net.Socket(), uid = '') {
     this.socket = socket
     this.socketId = uid
+    this.pubStack = {}
   }
 
   decode (buffer = Buffer.from([])) {
@@ -97,6 +98,7 @@ class JNCF {
       }
       topic = topicFormat(topic)
       if (debug) console.log('Topic:', topic)
+      if (!topic) throw new Error('Incorrect topic format')
       const messageId = to8bit(buffer[nextBit++]) + to8bit(buffer[nextBit++])
       if (debug) console.log('Message ID:', messageId, parseInt(messageId, 2))
       // payload
@@ -117,16 +119,21 @@ class JNCF {
       const messageId = parseInt((to8bit(buffer[nextBit++]) + to8bit(buffer[nextBit++])), 2)
       if (debug) console.log('Message ID:', messageId)
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
-      if (this.messageId) {
-        if (this.messageId === messageId) {
-          clearTimeout(this.loopPUB)
-          delete this.loopPUB
-          delete this.messageId
-          if (debug) console.log('PUBACK Complete')
-          if (debug) console.log('===== PUBACK END =====')
-          return null
-        } else throw new Error('Message ID not match')
-      } else throw new Error('Message ID not found')
+      for (const key in this.pubStack) {
+        if (this.pubStack.hasOwnProperty(key)) {
+          const pubData = this.pubStack[key]
+          if (key === ('m' + messageId)) {
+            clearTimeout(pubData.time)
+            delete this.pubStack[key]
+            if (PUBACKcount[key] > 1) PUBACKcount[key] -= 1
+            else delete PUBACKcount[key]
+            if (debug) console.log('PUBACK Complete')
+            if (debug) console.log('===== PUBACK END =====')
+            return null
+          }
+        }
+      }
+      throw new Error('Message ID not match')
     } else if (type === 5) { // SUB
       if (debug) console.log('Type: SUB')
       const topicLength = buffer[nextBit++]
@@ -137,6 +144,7 @@ class JNCF {
       }
       topic = topicFormat(topic)
       if (debug) console.log('Topic:', topic)
+      if (!topic) throw new Error('Incorrect topic format')
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
       if (!topicList[topic]) topicList[topic] = {}
       topicList[topic][this.socketId] = true
@@ -165,26 +173,27 @@ class JNCF {
 
   PUB (pubData = pubBuffer()) {
     if (!this.CHECKSOCKET()) return null
-    if (!this.countPUB) this.countPUB = 0
-    this.countPUB += 1
-    if (this.countPUB > 3) {
+    const msgId = 'm' + pubData.messageId
+    if (!this.pubStack[msgId]) this.pubStack[msgId] = { count: 0 }
+    this.pubStack[msgId].count += 1
+    if (this.pubStack[msgId].count > 3) {
       console.log(this.socketId, 'not response PUBACK...')
-      if (this.loopPUB) clearTimeout(this.loopPUB)
-      delete this.loopPUB
+      if (this.pubStack[msgId].time) clearTimeout(this.pubStack[msgId].time)
+      delete this.pubStack[msgId]
       this.END()
       return null
     }
     if (debug) console.log('PUB', this.socketId)
-    if (debug) console.log('Message ID:', pubData.messageId)
+    if (debug) console.log('Message ID:', pubData.messageId, '(' + this.pubStack[msgId].count + ')')
     this.waitPUBACK(pubData)
     if (debug) console.log('===== PUB END =====')
     return this.socket.write(pubData.buffer)
   }
 
   waitPUBACK (pubData = pubBuffer()) {
-    if (this.loopPUB) clearTimeout(this.loopPUB)
-    this.messageId = pubData.messageId
-    this.loopPUB = setTimeout(() => {
+    const msgId = 'm' + pubData.messageId
+    if (this.pubStack[msgId].time) clearTimeout(this.pubStack[msgId].time)
+    this.pubStack[msgId].time = setTimeout(() => {
       this.PUB(pubData)
     }, 10000)
   }
@@ -217,7 +226,13 @@ class JNCF {
   END () {
     if (this.isEnd) return null
     this.isConnect = false
-    // this.socket.end()
+    for (const key in this.pubStack) {
+      if (this.pubStack.hasOwnProperty(key)) {
+        const element = this.pubStack[key]
+        if (element.time) clearTimeout(element.time)
+      }
+    }
+    this.pubStack = {}
     if (this.topic) {
       // unset me in topic
       delete topicList[this.topic][this.socketId]
@@ -231,7 +246,6 @@ class JNCF {
 
   CHECKSOCKET () {
     if (this.socket.destroyed || this.isEnd) {
-      if (this.loopPUB) clearTimeout(this.loopPUB)
       console.error('Socket Destroyed!')
       this.END()
       return false
@@ -242,44 +256,44 @@ class JNCF {
 
 const pubToSub = (topic = '', payload = '') => {
   const myTopic = topicFormat(topic)
-  // const list = topicList[myTopic]
   let list = {}
   for (const key in topicList) {
     if (topicList.hasOwnProperty(key)) {
-      if (key.startsWith(myTopic, 0)) {
+      if (topicMatchCheck(myTopic, key)) {
         const element = topicList[key]
         for (const sid in element) list[sid] = true
       }
     }
   }
   if (list) {
-    const pubData = pubBuffer(topic, payload)
+    let pubData = pubBuffer(topic, payload)
+    while(PUBACKcount['m' + pubData.messageId]) pubData = pubBuffer(topic, payload)
+    const msgId = 'm' + pubData.messageId
+    PUBACKcount[msgId] = 0
     for (const key in list) {
       const thisJNCF = JNCFList[key]
-      if (thisJNCF) thisJNCF.PUB(pubData)
+      if (thisJNCF) {
+        PUBACKcount[msgId] += 1
+        thisJNCF.PUB(pubData)
+      }
     }
   }
 }
 
-const to8bit = (number = 0) => {
-  return ('00000000' + number.toString(2)).substr(-8)
+const topicMatchCheck = (topic = '', target = '') => {
+  topic += '/'
+  target += '/'
+  const topicRes = new RegExp(replaceRegExp(topic))
+  const targetRes = new RegExp(replaceRegExp(target))
+  return (topicRes.test(target) || targetRes.test(topic))
 }
 
-const debugBuffer = (buffer) => {
-  for (let i = 0; i < buffer.length; i++) {
-    const number = buffer[i]
-    const hex = ('00' + number.toString(16)).substr(-2)
-    const dec = ('000' + number.toString(10)).substr(-3)
-    const bin = to8bit(number)
-    const left = parseInt(bin.substr(0, 4), 2)
-    const right = parseInt(bin.substr(4, 4), 2)
-    let data = 'byte ' + ('00' + (i-2)).substr(-2)
-    data += ' => ' + hex + ' ' + dec + ' ' + bin.substr(0, 4) + ' ' + bin.substr(4, 4)
-    data += ' => ' + left + ' ' + right
-    data += ' => 0x' + left.toString(16) + ' 0x' + right.toString(16)
-    data += ' -> ' + String.fromCharCode(buffer[i])
-    console.log(data)
-  }
+const replaceRegExp = (text = '') => {
+  return '^' + text.replace(/\+/g, '[^/]+').replace('#/', '.+') + '$'
+}
+
+const to8bit = (number = 0) => {
+  return ('00000000' + number.toString(2)).substr(-8)
 }
 
 const topicFormat = (topic = '') => {
@@ -293,7 +307,15 @@ const topicFormat = (topic = '') => {
       }
     }
   }
-  return (newTopic === '' ? '/' : newTopic)
+  if (newTopic === '') return null
+  if (newTopic.indexOf('#') >= 0 && newTopic.indexOf('#') !== (newTopic.length - 1)) return null
+  if (newTopic.charAt(newTopic.length - 1) === '#') {
+    if (newTopic.charAt(newTopic.length - 2) !== '/') return null
+  }
+  if (newTopic.charAt(newTopic.length - 1) === '+') {
+    if (newTopic.charAt(newTopic.length - 2) !== '/') return null
+  }
+  return newTopic
 }
 
 const pubBuffer = (topic = '', payload = '') => {
