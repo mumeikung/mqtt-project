@@ -72,6 +72,7 @@ class JNCF {
     const RemainingLength = parseInt(to8bit(buffer[1]) + to8bit(buffer[2]), 2)
     if (debug) console.log('Remaining Length:', RemainingLength)
     let nextBit = 3
+
     if (type === 1) { // CONN Type
       if (debug) console.log('Type: CONN')
       const protocolNameLength = buffer[nextBit++]
@@ -87,7 +88,9 @@ class JNCF {
       if (protocolVersion !== 1) throw new Error('Protocol Level not correct')
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
       return this.CONNACK()
-    } else if (!this.isConnect) throw new Error('Socket:', this.socketId, 'not connect!!!')
+    }
+    else if (!this.isConnect) throw new Error('Socket: ' + this.socketId + 'not connect!!!')
+
     if (type === 3) { // PUB Type
       if (debug) console.log('Type: PUB')
       const topicLength = buffer[nextBit++]
@@ -114,7 +117,9 @@ class JNCF {
       this.PUBACK(messageId)
       this.isPub = true
       return pubToSub(topic, payload)
-    } else if (type === 4) { // PUBACK
+    }
+    
+    else if (type === 4) { // PUBACK
       if (debug) console.log('Type: PUBACK')
       const messageId = parseInt((to8bit(buffer[nextBit++]) + to8bit(buffer[nextBit++])), 2)
       if (debug) console.log('Message ID:', messageId)
@@ -134,7 +139,9 @@ class JNCF {
         }
       }
       throw new Error('Message ID not match')
-    } else if (type === 5) { // SUB
+    }
+    
+    else if (type === 5) { // SUB
       if (debug) console.log('Type: SUB')
       const topicLength = buffer[nextBit++]
       if (debug) console.log('Topic Length:', topicLength)
@@ -152,13 +159,18 @@ class JNCF {
       console.log(this.socketId, 'start subscribe Topic:', topic)
       this.isSub = true
       return this.SUBACK()
-    } else if (type === 7) { // PING
+    }
+    
+    else if (type === 7) { // PING
       if (debug) console.log('Type: PING')
       return this.PINGACK()
-    } else if (type === 9) { // DISCONN
+    }
+    
+    else if (type === 9) { // DISCONN
       if (debug) console.log('Type: DISCONN')
       return this.END()
     }
+    
     throw new Error ('Type not correct')
   }
 
