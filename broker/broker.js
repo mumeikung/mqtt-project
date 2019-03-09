@@ -110,7 +110,7 @@ class JNCF {
       }
       if (debug) console.log('Payload:', payload)
       if (nextBit-3 !== RemainingLength) throw new Error('Remaining Length not correct')
-      console.log(`PUBLISH => TOPIC: "${topic}" => MESSAGE: "${payload}"`)
+      console.log(`BROKER => TOPIC: "${topic}" => MESSAGE: "${payload}"`)
       this.PUBACK(messageId)
       this.isPub = true
       return pubToSub(topic, payload)
