@@ -42,7 +42,7 @@ con.connect(1883, ip, () => {
         if(buffer[0] === 64)
         {
             round = 1
-            con.end(Buffer.from([ 144, 0, 1, 0 ])) // DISCONN
+            con.end(Buffer.from([ 144, 0, 0 ])) // DISCONN
         }
         else if(buffer[0] === 32)
         {

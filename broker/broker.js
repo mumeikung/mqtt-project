@@ -240,7 +240,7 @@ class JNCF {
     delete JNCFList[this.socketId]
     this.isEnd = true
     if (this.isSub) console.log(this.socketId, 'stop subscribe Topic:', this.topic)
-    if (!this.socket.destroyed) this.socket.end(Buffer.from([144, 0, 1, 0]))
+    if (!this.socket.destroyed) this.socket.end(Buffer.from([144, 0, 0]))
     if (debug) console.log('===== END SOCKET =====')
   }
 
