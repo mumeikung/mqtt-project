@@ -1,5 +1,5 @@
 {
-  "name": "mqtt-broker",
+  "name": "jncf-broker",
   "version": "1.0.0",
   "main": "broker.js",
   "license": "MIT",
@@ -9,6 +9,6 @@
     "uuidv4": "^3.0.1"
   },
   "bin": {
-    "start-broke": "./broker.js"
+    "start-broker": "./broker.js"
   }
 }
