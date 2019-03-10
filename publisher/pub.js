@@ -42,7 +42,7 @@ con.connect(1883, ip, () => {
         if(buffer[0] === 64) // PUBACK
         {
             round = 1
-            con.end(Buffer.from([ 144, 0, 1, 0 ])) // DISCONN
+            if (!con.destroyed) con.end(Buffer.from([ 144, 0, 1, 0 ])) // DISCONN
             clearTimeout(timeout)
             timeout = -1
             return 0
@@ -66,7 +66,7 @@ con.connect(1883, ip, () => {
             }
             const remaining2Byte = addInfoToBuffer(buff, 2)
             buff.splice(0, 0, 48, remaining2Byte.dec1, remaining2Byte.dec2)
-            con.write(Buffer.from(buff))
+            // con.write(Buffer.from(buff))
             let i = 0
             const waitPub = function(str1 = []) 
             {

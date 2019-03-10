@@ -77,7 +77,7 @@ const runn = async() => {
             // console.log('message id:', mesID)
             // const payLoadSt = parseInt(pub[3], 16) + 6
             let payLoadMess = []
-            for (let i = parseInt(pub[3], 16) + 6, j = 0 ; i < pubLength+3 ; i++) payLoadMess[j++] = String.fromCharCode(pub[i])
+            for (let i = pub[3] + 6, j = 0 ; i < pubLength+3 ; i++) payLoadMess[j++] = String.fromCharCode(pub[i])
             console.log('Topic:', topicName, 'Message:', payLoadMess.join(''))
             // const ping = [112,0,0]
             // socket.write(Buffer.from(ping))
